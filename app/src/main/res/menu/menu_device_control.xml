@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@+id/menu_mode"
+        android:title="@string/menu_mode">
+        <menu android:id="@+id/sub_menu_mode">
+            <item android:id="@+id/menu_mode_manual"
+                android:title="@string/menu_mode_manual"   />
+
+            <item android:id="@+id/menu_mode_auto"
+                android:title="@string/menu_mode_auto"  />
+        </menu>
+    </item>
+
+    <item android:id="@+id/menu_connect"
+        android:title="@string/menu_connect"/>
+
+    <item android:id="@+id/menu_disconnect"
+        android:title="@string/menu_disconnect"/>
+
+    <!--Test IHM des capteurs-->
+    <item android:id="@+id/menu_sensors"
+        android:title="Sensors">
+        <menu android:id="@+id/sub_menu_sensors">
+
+            <item android:id="@+id/menu_sensor_adxl345"
+                android:title="@string/sensor_adxl345"  />
+
+            <item android:id="@+id/menu_sensor_bmp085"
+                android:title="@string/sensor_bmp085"  />
+
+            <item android:id="@+id/menu_sensor_hmc5883l"
+                android:title="@string/sensor_hmc5883l"  />
+
+            <item android:id="@+id/menu_sensor_tcs3414cs"
+                android:title="@string/sensor_tcs3414cs"  />
+
+            <item android:id="@+id/menu_sensor_tsl2561"
+                android:title="@string/sensor_tsl2561"   />
+        </menu>
+    </item>
+
+    <item android:id="@+id/menu_quit"
+        android:title="@string/menu_quit"/>
+
+</menu>

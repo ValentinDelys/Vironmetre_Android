@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".DeviceScan">
+
+    <item android:id="@+id/menu_scan"
+        android:title="@string/menu_scan"/>
+
+    <item android:id="@+id/menu_stop"
+        android:title="@string/menu_stop"/>
+
+    <item android:id="@+id/menu_quit"
+        android:title="@string/menu_quit"/>
+</menu>
