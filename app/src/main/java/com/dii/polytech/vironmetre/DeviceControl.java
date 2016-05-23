@@ -30,7 +30,7 @@ public class DeviceControl extends AppCompatActivity {
     public static final String EXTRAS_DEVICE_ADDRESS =  "DEVICE_ADDRESS";                           //MAC address passed by intent that lanched this activity
 
     //private static final String MLDP_PRIVATE_SERVICE =              "00035b03-58e6-07dd-021a-08123a000300"; //Private service for Microchip MLDP
-    private static final String MLDP_PRIVATE_SERVICE =              "00002000-0000-1000-8000-00805f9b34fb"; //Private service for Microchip MLDP
+    private static final String THOMAS_SERVICE =                    "00002000-0000-1000-8000-00805f9b34fb"; //Private service for Microchip MLDP
     public static final String MLDP_DATA_PRIVATE_CHAR =             "00035b03-58e6-07dd-021a-08123a000301"; //Characteristic for MLDP Data, properties - notify, write
     private static final String MLDP_CONTROL_PRIVATE_CHAR =         "00035b03-58e6-07dd-021a-08123a0003ff"; //Characteristic for MLDP Control, properties - read, write
     public static final String CHARACTERISTIC_NOTIFICATION_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";	//Special UUID for descriptor needed to enable notifications
@@ -50,7 +50,7 @@ public class DeviceControl extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_control);
 
-        Log.d("Service",MLDP_PRIVATE_SERVICE.substring(4,8));
+        Log.d("Service",THOMAS_SERVICE.substring(4,8));
 
         final Intent intent = getIntent();                                                          //Get the Intent that launched this activity
         String DeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);                              //Get the BLE device name from the Intent
@@ -365,7 +365,7 @@ public class DeviceControl extends AppCompatActivity {
 
             Log.d(TAG, "Found Gatt Service " + uuid);
 
-            if (uuid.equals(MLDP_PRIVATE_SERVICE)) {                                                        //See if it matches the UUID of the MLDP service
+            if (uuid.equals(THOMAS_SERVICE)) {                                                        //See if it matches the UUID of the MLDP service
                 List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();   //If so then get the service's list of characteristics
                 for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {                //Test each characteristic in the list of characteristics
                     uuid = gattCharacteristic.getUuid().toString();                                         //Get the string version of the characteristic's UUID
