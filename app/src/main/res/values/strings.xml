@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">VironMetre</string>
+    <string name="action_settings">Settings</string>
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="bluetooth_not_supported">Bluetooth not supported.</string>
+    <string name="mldp_not_supported">MLDP is not supported</string>
+    <string name="label_address">Address: </string>
+    <string name="label_state">State: </string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="title_devices">BLE Device Scan</string>
+    <string name="unknown_device">Unknown device</string>
+    <string name="unknown_characteristic">Unknown characteristic</string>
+    <string name="unknown_service">Unknown service</string>
+    <string name="question_mark">\?</string>
+    <string name="scan_in_progress">Scan in progress...</string>
+
+    <!-- DeviceScan items -->
+    <string name="device_scan_detected_devices">Detected devices</string>
+
+    <!-- DeviceControl items -->
+    <string name="device_control_selected_device">Selected device</string>
+    <string name="device_control_connection_state">State</string>
+    <string name="device_control_connected">Connected</string>
+    <string name="device_control_disconnected">Disconnected</string>
+    <string name="device_control_sensor">Sensor</string>
+    <string name="device_control_no_sensor_detected">No sensor detected</string>
+
+    <!--Sensors items-->
+    <string name="sensor_adxl345">ADXL345</string>
+    <string name="sensor_bmp085">BMP085</string>
+    <string name="sensor_hmc5883l">HMC5883L</string>
+    <string name="sensor_tcs3414cs">TCS3414CS</string>
+    <string name="sensor_tsl2561">TSL2561</string>
+
+    <string name="temperature">Temperature</string>
+    <string name="temperature_unit">°C</string>
+
+    <string name="pressure">Pressure</string>
+    <string name="pressure_unit">hPa</string>
+
+    <string name="luminosity">Luminosity</string>
+    <string name="luminosity_unit">Lux</string>
+
+    <!-- Menus items -->
+    <string name="menu_scan">Scan</string>
+    <string name="menu_stop">Stop</string>
+    <string name="menu_mode">Mode</string>
+    <string name="menu_mode_auto">Auto</string>
+    <string name="menu_mode_manual">Manual</string>
+    <string name="menu_connect">Connect</string>
+    <string name="menu_disconnect">Disconnect</string>
+    <string name="menu_quit">Quit</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_device_control">DeviceControl</string>
+</resources>
