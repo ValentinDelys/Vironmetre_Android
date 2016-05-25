@@ -47,7 +47,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -163,9 +162,7 @@ private void broadcastUpdate(final String action, final BluetoothGattCharacteris
     final Intent intent = new Intent(action);                                       //Create new intent to broadcast the action
     if(action.equals(ACTION_DATA_AVAILABLE)) {                                      //See if we need to send data
         //if (UUID_MLDP_DATA_PRIVATE_CHARACTERISTIC.equals(characteristic.getUuid())) { //See if this is the correct characteristic
-            String dataValue = Arrays.toString(characteristic.getValue());                    //Get the data (in this case it is a string)
-            intent.putExtra(EXTRA_DATA, dataValue);                                 //Add the data string to the intent
-        //}
+        intent.putExtra(EXTRA_DATA,characteristic.getValue());
     }
     else {                                                                          //Did not get an action string we expect
         Log.d(TAG, "Action: " + action);

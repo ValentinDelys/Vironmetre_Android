@@ -20,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DeviceControl extends AppCompatActivity {
@@ -29,19 +30,27 @@ public class DeviceControl extends AppCompatActivity {
     public static final String EXTRAS_DEVICE_NAME =     "DEVICE_NAME";                              //Name passed by intent that lanched this activity
     public static final String EXTRAS_DEVICE_ADDRESS =  "DEVICE_ADDRESS";                           //MAC address passed by intent that lanched this activity
 
-    //private static final String MLDP_PRIVATE_SERVICE =              "00035b03-58e6-07dd-021a-08123a000300"; //Private service for Microchip MLDP
-    private static final String THOMAS_SERVICE =                    "00002000-0000-1000-8000-00805f9b34fb"; //Private service for Microchip MLDP
+    public static final byte NOSENSOR =  0x00;
+    public static final byte BMP085   =  0x77;
+    public static final byte TSL2561   = 0x29;
+
+    private static final String VIRONMETRE_SERVICE =                "00002000-0000-1000-8000-00805f9b34fb";
+    private static final String CHARACTERISTIC_SENSOR =             "00003000-0000-1000-8000-00805f9b34fb";
+    private static final String CHARACTERISTIC_REQUEST =            "00003001-0000-1000-8000-00805f9b34fb";
+    private static final String CHARACTERISTIC_RESPONSE =           "00003002-0000-1000-8000-00805f9b34fb";
     public static final String MLDP_DATA_PRIVATE_CHAR =             "00035b03-58e6-07dd-021a-08123a000301"; //Characteristic for MLDP Data, properties - notify, write
-    private static final String MLDP_CONTROL_PRIVATE_CHAR =         "00035b03-58e6-07dd-021a-08123a0003ff"; //Characteristic for MLDP Control, properties - read, write
     public static final String CHARACTERISTIC_NOTIFICATION_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";	//Special UUID for descriptor needed to enable notifications
 
+    private static final byte CMD_READ  = 0x52; // 'R'
+    private static final byte CMD_WRITE = 0x57; // 'W'
+
     private BluetoothLeService mBluetoothLeService;                                                 //Service to handle BluetoothGatt connection to the RN4020 module
-    private BluetoothGattCharacteristic mDataMDLP, mControlMLDP;                                    //The BLE characteristic used for MLDP data transfers
+    private BluetoothGattCharacteristic mCharactRequest, mCharactResponse, mCharactSensor;          //The BLE characteristic used for Vironmetre data transfers
 
     private TextView mDeviceName = null;
     private TextView mSensorName = null;
     private TextView mConnectionState = null;                                                       //TextViews to show connection state
-    private String incomingMessage;                                                                 //String to hold the incoming message from the MLDP characteristic
+    private String incomingMessage;                                                                 //String to hold the incoming message from the Vironmetre characteristic
     private boolean mConnected = false;                                                             //Indicator of an active Bluetooth connection
     private String mDeviceAddress;                                                                  //String for the Bluetooth MAC address
 
@@ -50,7 +59,7 @@ public class DeviceControl extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_control);
 
-        Log.d("Service",THOMAS_SERVICE.substring(4,8));
+        Log.d("Service",VIRONMETRE_SERVICE.substring(4,8));
 
         final Intent intent = getIntent();                                                          //Get the Intent that launched this activity
         String DeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);                              //Get the BLE device name from the Intent
@@ -81,6 +90,7 @@ public class DeviceControl extends AppCompatActivity {
 
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);                      //Create Intent to start the BluetoothLeService
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);                       //Create and bind the new service to mServiceConnection object that handles service connect and disconnect
+
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -149,14 +159,14 @@ public class DeviceControl extends AppCompatActivity {
                 finish();                                                                           //End the app
                 break;
 
-            /*Test IHM des capteurs*/
-            case R.id.menu_sensor_bmp085:
-            case R.id.menu_sensor_tsl2561:
-            case R.id.menu_sensor_adxl345:
-            case R.id.menu_sensor_hmc5883l:
-            case R.id.menu_sensor_tcs3414cs:
-                updateConnectedSensor((String) item.getTitle());
-                return true;
+//            /*Test IHM des capteurs*/
+//            case R.id.menu_sensor_bmp085:
+//            case R.id.menu_sensor_tsl2561:
+//            case R.id.menu_sensor_adxl345:
+//            case R.id.menu_sensor_hmc5883l:
+//            case R.id.menu_sensor_tcs3414cs:
+//                updateConnectedSensor((String) item.getTitle());
+//                return true;
             default:
                 break;
         }
@@ -215,17 +225,36 @@ public class DeviceControl extends AppCompatActivity {
             }
 
             else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {           //Service has discovered GATT services on BLE device
-                findMldpGattService(mBluetoothLeService.getSupportedGattServices()); 	            //Show all the supported services and characteristics on the user interface
+                findVironmetreGattService(mBluetoothLeService.getSupportedGattServices()); 	            //Show all the supported services and characteristics on the user interface
             }
 
             else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {                     //Service has found new data available on BLE device
-                String dataValue = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);            //Get the value of the characteristic
-                if(dataValue != null)
-                {
-                    Log.d(TAG, dataValue);
-                }
+                byte[] bytes = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);             //Get the value of the characteristic
 
-                //processIncomingPacket(dataValue);                                                   //Process the data that was received
+
+                if(bytes[0] == 1)                                                                   //Sensor detected
+                {
+                    switch(bytes[1]){
+                        case BMP085:
+                            updateConnectedSensor(BMP085);
+                            break;
+                        case TSL2561:
+                            updateConnectedSensor(TSL2561);
+                            break;
+
+                        default:
+                            ViewFlipper ViewFlipper = (ViewFlipper)findViewById(R.id.DeviceControl_ViewFlipper);
+                            ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_NoSensor)));
+                            mSensorName.setText(R.string.device_control_unknown_sensor);
+
+                            break;
+                    }
+            }
+
+                else
+                {
+                    updateConnectedSensor(NOSENSOR);
+                }
             }
 
             //For information only. This application sends small packets infrequently and does not need to know what the previous write completed
@@ -235,24 +264,24 @@ public class DeviceControl extends AppCompatActivity {
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    private void updateConnectedSensor(final String sensorName) {
+    private void updateConnectedSensor(final byte sensorName) {
 
-        if (mSensorName != null) {
-            mSensorName.setText(sensorName);
-        }
+//        if (mSensorName != null) {
+//            mSensorName.setText(sensorName);
+//        }
 
         Typeface dSeg7 = Typeface.createFromAsset(getAssets(),"fonts/DSEG7Classic-Regular.ttf");
 
         ViewFlipper ViewFlipper = (ViewFlipper)findViewById(R.id.DeviceControl_ViewFlipper);
         if (ViewFlipper != null) {
-            if (mSensorName != null) {
+//            if (mSensorName != null) {
                 switch (sensorName){
-                    case "ADXL345":
-                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorADXL345)));
-                        mSensorName.setText(R.string.sensor_adxl345);
+                    case NOSENSOR:
+                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_NoSensor)));
+                        mSensorName.setText(R.string.device_control_no_sensor_detected);
                         break;
 
-                    case "BMP085":
+                    case BMP085:
                         ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorBMP085)));
                         mSensorName.setText(R.string.sensor_bmp085);
 
@@ -269,31 +298,37 @@ public class DeviceControl extends AppCompatActivity {
                         }
                         break;
 
-                    case "HMC5883L":
-                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorHMC5883L)));
-                        mSensorName.setText(R.string.sensor_hmc5883l);
-                        break;
 
-                    case "TCS3414CS":
-                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorTCS3414CS)));
-                        mSensorName.setText(R.string.sensor_tcs3414cs);
-                        break;
-
-                    case "TSL2561":
-                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorTSL2561)));
-                        mSensorName.setText(R.string.sensor_tsl2561);
-
-                        TextView luminosityTSL2561 = (TextView)findViewById(R.id.SensorTSL2561_Luminosity);
-                        if (luminosityTSL2561 != null) {
-                            luminosityTSL2561.setText("175");
-                            luminosityTSL2561.setTypeface(dSeg7);
-                        }
-
-                        break;
+//                    case "ADXL345":
+//                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorADXL345)));
+//                        mSensorName.setText(R.string.sensor_adxl345);
+//                        break;
+//
+//                    case "HMC5883L":
+//                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorHMC5883L)));
+//                        mSensorName.setText(R.string.sensor_hmc5883l);
+//                        break;
+//
+//                    case "TCS3414CS":
+//                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorTCS3414CS)));
+//                        mSensorName.setText(R.string.sensor_tcs3414cs);
+//                        break;
+//
+//                    case "TSL2561":
+//                        ViewFlipper.setDisplayedChild(ViewFlipper.indexOfChild(findViewById(R.id.DeviceControl_SensorTSL2561)));
+//                        mSensorName.setText(R.string.sensor_tsl2561);
+//
+//                        TextView luminosityTSL2561 = (TextView)findViewById(R.id.SensorTSL2561_Luminosity);
+//                        if (luminosityTSL2561 != null) {
+//                            luminosityTSL2561.setText("175");
+//                            luminosityTSL2561.setTypeface(dSeg7);
+//                        }
+//
+//                        break;
                     default:
                         break;
                 }
-            }
+//            }
         }
     }
 
@@ -312,71 +347,70 @@ public class DeviceControl extends AppCompatActivity {
         });
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Update text roll of die and send over Bluetooth
-    private void updateDieState() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                //mDataMDLP.setValue("=>R" + redDie.Roll() + "\r\n");                     //Set value of MLDP characteristic to send die roll information
-                //mBluetoothLeService.writeCharacteristic(mDataMDLP);                     //Call method to write the characteristic
-                //redDieText.setText(Byte.toString(redDie.View()));                       //Set the die text to show the last die roll
-                //int height = redDieText.getHeight();                                    //Get the available height for the text object
-                //redDieText.setTextSize(TypedValue.COMPLEX_UNIT_PX, (height * 4 / 5));   //Set the size of the text to take up 80% available space
-            }
-        });
+    public boolean ReadBytes(byte[] readBuffer, byte length)
+    {
+        if (length == 0)
+            length = (byte)readBuffer.length;
+
+        ArrayList data = new ArrayList<>();
+        data.add(CMD_READ);
+        data.add(length);
+
+        // Send info to microcontroller
+        mCharactRequest.setValue(data.toString().getBytes());
+        mBluetoothLeService.writeCharacteristic(mCharactRequest);
+
+        return true;
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Look for message with switch pressed indicator "->S1\n\r"
-    private void processIncomingPacket(String data) {
-//        char switchState;
-//        int indexStart, indexEnd;
-//        incomingMessage = incomingMessage.concat(data);                                             //Add the new data to what is left of previous data
-//        if (incomingMessage.length() >= 6
-//                && incomingMessage.contains("=>S") && incomingMessage.contains("\r\n")) {           //See if we have the right message
-//            indexStart = incomingMessage.indexOf("=>S");                                            //Get the position of the matching characters
-//            indexEnd = incomingMessage.indexOf("\r\n");                                             //Get the position of the end of frame "\r\n"
-//            if (indexEnd - indexStart == 4) {                                                       //Check that the packet does not have missing or extra characters
-//                switchState = incomingMessage.charAt(indexStart + 3);                               //Get the character that represents the switch being pressed
-//                if (switchState == '1') {                                                           //Is it a "1"
-//                    //updateDieState();                                                               // if so then update the state of the die with a new roll and send over BLE
-//                }
-//            }
-//            incomingMessage = incomingMessage.substring(indexEnd + 2);                              //Thow away everything up to and including "\n\r"
-//        }
-//        else if (incomingMessage.contains("\r\n")) {                                                //See if we have an end of frame "\r\n" without a valid message
-//            incomingMessage = incomingMessage.substring(incomingMessage.indexOf("\r\n") + 2);       //Thow away everything up to and including "\n\r"
-//        }
+    public boolean WriteBytes(byte[] writeBuffer, byte length)
+    {
+        if(length == 0)
+            length = (byte)writeBuffer.length;
+
+        ArrayList data = new ArrayList<>();
+        data.add(CMD_WRITE);
+        data.add(writeBuffer);
+        data.add(length);
+
+        // Send info to microcontroller
+        mCharactRequest.setValue(data.toString().getBytes());
+        mBluetoothLeService.writeCharacteristic(mCharactRequest);
+
+        return true;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
     // Iterate through the supported GATT Services/Characteristics to see if the MLDP service is supported
-    private void findMldpGattService(List<BluetoothGattService> gattServices) {
+    private void findVironmetreGattService(List<BluetoothGattService> gattServices) {
         if (gattServices == null) {                                                                         //Verify that list of GATT services is valid
-            Log.d(TAG, "findMldpGattService found no Services");
+            Log.d(TAG, "findVironmetreGattService found no Services");
             return;
         }
+        mCharactSensor = null;
         String uuid;                                                                                        //String to compare received UUID with desired known UUIDs
-        mDataMDLP = null;                                                                                   //Searching for a characteristic, start with null value
 
         for (BluetoothGattService gattService : gattServices) {                                             //Test each service in the list of services
             uuid = gattService.getUuid().toString();                                                        //Get the string version of the service's UUID
 
-            Log.d(TAG, "Found Gatt Service " + uuid);
+            Log.d(TAG, "Found Gatt Service = " + uuid);
 
-            if (uuid.equals(THOMAS_SERVICE)) {                                                        //See if it matches the UUID of the MLDP service
+            if (uuid.equals(VIRONMETRE_SERVICE)) {                                                          //See if it matches the UUID of the Vironmetre service
                 List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();   //If so then get the service's list of characteristics
                 for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {                //Test each characteristic in the list of characteristics
                     uuid = gattCharacteristic.getUuid().toString();                                         //Get the string version of the characteristic's UUID
-                    Log.d(TAG,"UUID = " + uuid);
-                    if (uuid.equals(MLDP_DATA_PRIVATE_CHAR)) {                                              //See if it matches the UUID of the MLDP data characteristic
-                        mDataMDLP = gattCharacteristic;                                                     //If so then save the reference to the characteristic
-                        Log.d(TAG, "Found MLDP data characteristics");
+                    Log.d(TAG,"Characteristic = " + uuid);
+                    if (uuid.equals(CHARACTERISTIC_REQUEST)) {                                              //See if it matches the UUID of the Vironmetre request characteristic
+                        mCharactRequest = gattCharacteristic;                                                     //If so then save the reference to the characteristic
+                        Log.d(TAG, "Found Vironmetre request characteristics");
                     }
-                    else if (uuid.equals(MLDP_CONTROL_PRIVATE_CHAR)) {                                      //See if UUID matches the UUID of the MLDP control characteristic
-                        mControlMLDP = gattCharacteristic;                                                  //If so then save the reference to the characteristic
-                        Log.d(TAG, "Found MLDP control characteristics");
+                    else if (uuid.equals(CHARACTERISTIC_RESPONSE)) {                                            //See if UUID matches the UUID of the Vironmetre response characteristic
+                        mCharactResponse = gattCharacteristic;                                                  //If so then save the reference to the characteristic
+                        Log.d(TAG, "Found Vironmetre response characteristics");
+                    }
+                    else if (uuid.equals(CHARACTERISTIC_SENSOR)) {                                            //See if UUID matches the UUID of the Vironmetre sensor characteristic
+                        mCharactSensor = gattCharacteristic;                                                  //If so then save the reference to the characteristic
+                        Log.d(TAG, "Found Vironmetre sensor characteristics");
                     }
                     final int characteristicProperties = gattCharacteristic.getProperties();                             //Get the properties of the characteristic
                     if ((characteristicProperties & (BluetoothGattCharacteristic.PROPERTY_NOTIFY)) > 0) {                //See if the characteristic has the Notify property
@@ -395,10 +429,10 @@ public class DeviceControl extends AppCompatActivity {
                 break;
             }
         }
-        if (mDataMDLP == null) {                                                                    //See if the MLDP data characteristic was not found
-            Toast.makeText(this, R.string.mldp_not_supported, Toast.LENGTH_SHORT).show();               //If so then show an error message
-            Log.d(TAG, "findMldpGattService found no MLDP service");
-            //finish();                                                                               //and end the activity
+        if (mCharactSensor == null) {                                                                    //See if the Vironmetre data characteristic was not found
+            Toast.makeText(this, R.string.vironmetre_not_supported, Toast.LENGTH_SHORT).show();          //If so then show an error message
+            Log.d(TAG, "findVironmetreGattService found no Vironmetre service");
+            //finish();                                                                                  //and end the activity
         }
     }
 
