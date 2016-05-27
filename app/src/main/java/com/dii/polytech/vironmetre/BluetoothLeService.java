@@ -66,8 +66,8 @@ public final static String ACTION_GATT_SERVICES_DISCOVERED = "com.dii.polytech.v
 public final static String ACTION_DATA_AVAILABLE = "com.dii.polytech.vironmetre.ACTION_DATA_AVAILABLE";
 public final static String ACTION_DATA_WRITTEN = "com.dii.polytech.vironmetre.ACTION_DATA_WRITTEN";
 public final static String EXTRA_DATA = "com.dii.polytech.vironmetre.EXTRA_DATA";
+public final static String EXTRA_CHARACTERISTIC_NAME = "com.dii.polytech.vironmetre.EXTRA_CHARACTERISTIC_NAME";
 
-public final static UUID UUID_MLDP_DATA_PRIVATE_CHARACTERISTIC = UUID.fromString(DeviceControl.MLDP_DATA_PRIVATE_CHAR);
 public final static UUID UUID_CHARACTERISTIC_NOTIFICATION_CONFIG = UUID.fromString(DeviceControl.CHARACTERISTIC_NOTIFICATION_CONFIG);
 
 private final IBinder mBinder = new LocalBinder();                                  //Binder for Activity that binds to this Service
@@ -126,7 +126,6 @@ private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() 
         }
     }
 
-    //For information only. This application uses Indication to receive updated characteristic data, not Read
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) { //A request to Read has completed
         if (status == BluetoothGatt.GATT_SUCCESS) {                                 //See if the read was successful
@@ -134,7 +133,6 @@ private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() 
         }
     }
 
-    //For information only. This application sends small packets infrequently and does not need to know what the previous write completed
     @Override
     public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) { //A request to Write has completed
         if (status == BluetoothGatt.GATT_SUCCESS) {                                 //See if the write was successful
@@ -161,8 +159,8 @@ private void broadcastUpdate(final String action) {
 private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic) {
     final Intent intent = new Intent(action);                                       //Create new intent to broadcast the action
     if(action.equals(ACTION_DATA_AVAILABLE)) {                                      //See if we need to send data
-        //if (UUID_MLDP_DATA_PRIVATE_CHARACTERISTIC.equals(characteristic.getUuid())) { //See if this is the correct characteristic
         intent.putExtra(EXTRA_DATA,characteristic.getValue());
+        intent.putExtra(EXTRA_CHARACTERISTIC_NAME,characteristic.getUuid().toString());
     }
     else {                                                                          //Did not get an action string we expect
         Log.d(TAG, "Action: " + action);
@@ -244,7 +242,6 @@ public void disconnect() {
 // ----------------------------------------------------------------------------------------------------------------
 // Request a read of a given BluetoothGattCharacteristic. The Read result is reported asynchronously through the
 // BluetoothGattCallback onCharacteristicRead callback method.
-// For information only. This application uses Indication to receive updated characteristic data, not Read
 public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
     if (mBluetoothAdapter == null || mBluetoothGatt == null) {                      //Check that we have access to a Bluetooth radio
         Log.w(TAG, "BluetoothAdapter not initialized");
@@ -276,7 +273,6 @@ public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
 
 // ----------------------------------------------------------------------------------------------------------------
 // Enable notification on a characteristic
-// For information only. This application uses Indication, not Notification
 public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled) {
     if (mBluetoothAdapter == null || mBluetoothGatt == null) {                      //Check that we have a GATT connection
         Log.w(TAG, "BluetoothAdapter not initialized");
@@ -284,11 +280,9 @@ public void setCharacteristicNotification(BluetoothGattCharacteristic characteri
     }
     mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);          //Enable notification and indication for the characteristic
 
-//        if (UUID_MLDP_DATA_PRIVATE_CHARACTERISTIC.equals(characteristic.getUuid())) {
     BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_CHARACTERISTIC_NOTIFICATION_CONFIG); //Get the descripter that enables notification on the server
     descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);         //Set the value of the descriptor to enable notification
     mBluetoothGatt.writeDescriptor(descriptor);                                     //Write the descriptor
-//        }
 }
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -300,12 +294,10 @@ public void setCharacteristicIndication(BluetoothGattCharacteristic characterist
     }
     mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);          //Enable notification and indication for the characteristic
 
-    // This is specific to our custom profile
-//        if (UUID_MLDP_DATA_PRIVATE_CHARACTERISTIC.equals(characteristic.getUuid())) {
     BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_CHARACTERISTIC_NOTIFICATION_CONFIG); //Get the descripter that enables indication on the server
     descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);           //Set the value of the descriptor to enable indication
     mBluetoothGatt.writeDescriptor(descriptor);                                     //Write the descriptor
-//        }
+
 }
 
 }
